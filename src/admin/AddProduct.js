@@ -1,17 +1,19 @@
 import React, { useState,useEffect }from 'react'
 import { Link } from 'react-router-dom'
+import { isAutheticated } from '../auth/helper'
 import Base from '../core/Base'
-import {getCategories} from './helper/adminapicall'
+import {createProduct, getCategories} from './helper/adminapicall'
 
 
 const AddProduct = () => {
+  const { user, token } = isAutheticated();
     
     const [values, setValues] = useState({
         name: "",
         description: "",
         price: "",
         stock: "",
-        phot: "",
+        photo: "",
         categories: [],
         category: "",
         loading: false,
@@ -35,15 +37,55 @@ const AddProduct = () => {
     }
      
     const handleChange = name =>event => {
+      const value = name === "photo" ? event.target.files[0] : event.target.value;
+      formData.set(name, value);
+      setValues({...values,[name]: value})
+  }
+  
+  const successMessage = () => {
+    return (
+      <div className="alert alert-success mt-3"
+        style={{ display: createdProduct ? "" : "none" }}>
+        <h4>{ createdProduct} created successfully</h4>
+      </div>);
+  }
     
-    }
-    
-    useEffect(() => {
-       preload()
-    }, [])
+
+  const errorMessage = () => {
+    if (error) {
+      return (
+      
+        <div className="alert alert-danger mt-3"
+          style={{ display: createdProduct ? "" : "none" }}>
+          <h4>{createdProduct} error in creating product</h4>
+        </div>
+     )
+  }
+  }
+  useEffect(() => {
+    preload()
+  }, []);
 
 
-    const onSubmit = () => {
+  const onSubmit = (event) => {
+    event.preventDefault();
+    setValues({ ...values, error: "", loading: true });
+    createProduct(user._id, token, formData).then(data => {
+      if (data.error) {
+        setValues({ ...values, error: data.error });
+      } else {
+        setValues({
+          ...values,
+          name: "",
+          description: "",
+          price: "",
+          photo: "",
+          stock: "",
+          loading: false,
+          createdProduct:data.name
+        })
+      }
+    })
 
     }
     const createProductForm = () => (
@@ -94,13 +136,17 @@ const AddProduct = () => {
           placeholder="Category"
         >
           <option>Select</option>
-          <option value="a">a</option>
-          <option value="b">b</option>
+            {categories && 
+              categories.map((cate,index) => {
+                return (
+                  <option key={index} value={cate._id}>{cate.name}</option>
+            )
+          })}
         </select>
       </div>
       <div className="form-group m-2">
         <input
-          onChange={handleChange("quantity")}
+          onChange={handleChange("stock")}
           type="number"
           className="form-control"
           placeholder="Quantity"
@@ -122,7 +168,10 @@ const AddProduct = () => {
             <Link to="/admin/dashboard" className="btn btn-md btn-dark mb-3 ">Admin Home</Link>
             <div className="row bg-dark text-white rounded">
                 <div className="col-md-8 offset-md-2">
-                    <h1>{createProductForm()}</h1>
+            <h1>
+              {successMessage()}
+              {errorMessage()}
+              {createProductForm()}</h1>
                 </div>
             </div>
         </Base>
